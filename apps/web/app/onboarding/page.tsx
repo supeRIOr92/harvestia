@@ -97,31 +97,19 @@ gender === g
 : 'bg-green-800 text-green-300 hover:bg-green-700'
 }`}
 >
-{/* Sprite preview — crop frame pertama (menghadap depan) */}
+{/* Sprite preview */}
 <div
 style={{
 width: '80px',
 height: '80px',
-overflow: 'hidden',
-imageRendering: 'pixelated',
-position: 'relative',
-}}
->
-<img
-src={`/assets/characters/${g}.png`}
-alt={g}
-style={{
-position: 'absolute',
-top: '0',
-left: '0',
-width: '320px',
-height: '320px',
-objectFit: 'none',
-objectPosition: '0 0',
+backgroundImage: `url(/assets/characters/${g}.png)`,
+backgroundSize: '400% auto',
+backgroundPosition: '3% 40%',
+backgroundRepeat: 'no-repeat',
 imageRendering: 'pixelated',
 }}
 />
-</div>
+
 <span className="capitalize">{g}</span>
 </button>
 ))}
