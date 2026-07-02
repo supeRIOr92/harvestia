@@ -21,7 +21,6 @@ router.push('/')
 
 useEffect(() => {
 if (!ready || !authenticated || !user) return
-// Cek apakah user sudah punya akun
 const checkUser = async () => {
 const wallet = user.wallet?.address
 if (!wallet) return
@@ -38,36 +37,35 @@ checkUser()
 }, [ready, authenticated, user, router])
 
 const handleSubmit = async () => {
-if (!gender) return setError('Pilih gender dulu')
-if (!username.trim()) return setError('Nama karakter tidak boleh kosong')
-if (username.trim().length < 3) return setError('Nama minimal 3 karakter')
-if (username.trim().length > 20) return setError('Nama maksimal 20 karakter')
+if (!gender) return setError('Choose your gender first')
+if (!username.trim()) return setError('Farmer name cannot be empty')
+if (username.trim().length < 3) return setError('Name must be at least 3 characters')
+if (username.trim().length > 20) return setError('Name must be 20 characters or less')
 
 const wallet = user?.wallet?.address
-if (!wallet) return setError('Wallet tidak ditemukan')
+if (!wallet) return setError('Wallet not found')
 
 setLoading(true)
 setError('')
 
-const { error: insertError } = await supabase.from('users').insert({
-wallet_address: wallet,
-username: username.trim(),
-gender,
-})
+const { data: newUser, error: insertError } = await supabase
+.from('users')
+.insert({ wallet_address: wallet, username: username.trim(), gender })
+.select('id')
+.single()
 
 if (insertError) {
 if (insertError.code === '23505') {
-setError('Username sudah dipakai, coba yang lain')
+setError('Username already taken, try another')
 } else {
-setError('Gagal membuat akun, coba lagi')
+setError('Failed to create account, please try again')
 }
 setLoading(false)
 return
 }
 
-// Buat balance awal
 await supabase.from('balances').insert({
-user_id: (await supabase.from('users').select('id').eq('wallet_address', wallet).single()).data?.id,
+user_id: newUser.id,
 gold: 100,
 hvst: 0,
 })
@@ -77,6 +75,9 @@ router.push('/farm')
 
 if (!ready) return null
 
+// Tiap frame = 1254/4 = 313.5px wide, 1254px tall
+// Kita tampil frame pertama (menghadap depan) dengan object-position
+const FRAME_WIDTH = 1254 / 4
 return (
 <main className="min-h-screen bg-green-950 flex flex-col items-center justify-center p-4">
 <div className="bg-green-900 rounded-2xl p-8 w-full max-w-md space-y-6">
@@ -86,26 +87,44 @@ return (
 <div className="space-y-2">
 <p className="text-green-400 font-medium">Choose Gender</p>
 <div className="grid grid-cols-2 gap-3">
+{(['male', 'female'] as const).map((g) => (
 <button
-onClick={() => setGender('male')}
-className={`py-4 rounded-xl font-semibold transition-colors ${
-gender === 'male'
-? 'bg-green-500 text-white'
+key={g}
+onClick={() => setGender(g)}
+className={`py-4 rounded-xl font-semibold transition-colors flex flex-col items-center gap-2 ${
+gender === g
+? 'bg-green-500 text-white ring-2 ring-green-300'
 : 'bg-green-800 text-green-300 hover:bg-green-700'
 }`}
 >
-👨 Male
-</button>
-<button
-onClick={() => setGender('female')}
-className={`py-4 rounded-xl font-semibold transition-colors ${
-gender === 'female'
-? 'bg-green-500 text-white'
-: 'bg-green-800 text-green-300 hover:bg-green-700'
-}`}
+{/* Sprite preview — crop frame pertama (menghadap depan) */}
+<div
+style={{
+width: '80px',
+height: '80px',
+overflow: 'hidden',
+imageRendering: 'pixelated',
+position: 'relative',
+}}
 >
-👩 Female
+<img
+src={`/assets/characters/${g}.png`}
+alt={g}
+style={{
+position: 'absolute',
+top: '0',
+left: '0',
+width: '320px',
+height: '320px',
+objectFit: 'none',
+objectPosition: '0 0',
+imageRendering: 'pixelated',
+}}
+/>
+</div>
+<span className="capitalize">{g}</span>
 </button>
+))}
 </div>
 </div>
 
@@ -123,12 +142,8 @@ className="w-full bg-green-800 text-green-100 placeholder-green-600 rounded-xl p
 <p className="text-green-600 text-sm">{username.length}/20</p>
 </div>
 
-{/* Error */}
-{error && (
-<p className="text-red-400 text-sm">{error}</p>
-)}
+{error && <p className="text-red-400 text-sm">{error}</p>}
 
-{/* Submit */}
 <button
 onClick={handleSubmit}
 disabled={loading}
