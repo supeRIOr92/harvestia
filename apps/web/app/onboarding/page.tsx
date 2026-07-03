@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { usePrivy } from '@privy-io/react-auth'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export default function OnboardingPage() {
 const { ready, authenticated, user } = usePrivy()
@@ -24,12 +25,9 @@ if (!ready || !authenticated || !user) return
 const checkUser = async () => {
 const wallet = user.wallet?.address
 if (!wallet) return
-const { data } = await supabase
-.from('users')
-.select('id')
-.eq('wallet_address', wallet)
-.single()
-if (data) {
+const res = await fetch(`${API_URL}/api/users/${wallet}`)
+const data = await res.json()
+if (data.user) {
 router.push('/farm')
 }
 }
@@ -48,36 +46,29 @@ if (!wallet) return setError('Wallet not found')
 setLoading(true)
 setError('')
 
-const { data: newUser, error: insertError } = await supabase
-.from('users')
-.insert({ wallet_address: wallet, username: username.trim(), gender })
-.select('id')
-.single()
+const res = await fetch(`${API_URL}/api/users`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({
+walletAddress: wallet,
+username: username.trim(),
+gender,
+}),
+})
 
-if (insertError) {
-if (insertError.code === '23505') {
-setError('Username already taken, try another')
-} else {
-setError('Failed to create account, please try again')
-}
+const data = await res.json()
+
+if (data.error) {
+setError(data.error)
 setLoading(false)
 return
 }
-
-await supabase.from('balances').insert({
-user_id: newUser.id,
-gold: 100,
-hvst: 0,
-})
 
 router.push('/farm')
 }
 
 if (!ready) return null
 
-// Tiap frame = 1254/4 = 313.5px wide, 1254px tall
-// Kita tampil frame pertama (menghadap depan) dengan object-position
-const FRAME_WIDTH = 1254 / 4
 return (
 <main className="min-h-screen bg-green-950 flex flex-col items-center justify-center p-4">
 <div className="bg-green-900 rounded-2xl p-8 w-full max-w-md space-y-6">
@@ -104,12 +95,11 @@ width: '80px',
 height: '80px',
 backgroundImage: `url(/assets/characters/${g}.png)`,
 backgroundSize: '400% auto',
-backgroundPosition: '3% 40%',
+backgroundPosition: '5% 40%',
 backgroundRepeat: 'no-repeat',
 imageRendering: 'pixelated',
 }}
 />
-
 <span className="capitalize">{g}</span>
 </button>
 ))}

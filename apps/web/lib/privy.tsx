@@ -11,6 +11,11 @@ appearance: {
 theme: 'dark',
 accentColor: '#4ade80',
 },
+embeddedWallets: {
+solana: {
+createOnLogin: 'users-without-wallets',
+},
+},
 }}
 >
 {children}
